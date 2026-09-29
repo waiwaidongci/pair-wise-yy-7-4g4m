@@ -40,6 +40,192 @@
           "at": "2026-06-21T03:50:29.186Z",
           "step": "帆索",
           "note": "后桅升帆索 · 偏紧"
+        },
+        {
+          "at": "2026-09-29T02:43:24.724Z",
+          "step": "交付资格",
+          "note": "提交端接单：前桅侧支索 → 挂起交付"
+        },
+        {
+          "at": "2026-09-29T02:43:24.760Z",
+          "step": "交付资格",
+          "note": "提交端接单：后桅升帆索 → 挂起交付"
+        },
+        {
+          "at": "2026-09-29T02:43:40.885Z",
+          "step": "交付资格",
+          "note": "拉脱不合格转待返工：前桅侧支索（位移1.1mm，滑移0.1mm） → 挂起交付"
+        },
+        {
+          "at": "2026-09-29T02:43:40.907Z",
+          "step": "交付资格",
+          "note": "拉脱不合格转待返工：前桅侧支索（位移1mm，滑移0.31mm） → 挂起交付"
+        },
+        {
+          "at": "2026-09-29T02:43:40.928Z",
+          "step": "交付资格",
+          "note": "拉脱合格：前桅侧支索（1mm/0.3mm） → 挂起交付"
+        },
+        {
+          "at": "2026-09-29T02:43:57.328Z",
+          "step": "交付资格",
+          "note": "拉脱合格：后桅升帆索（0.8mm/0.2mm） → 可交付"
+        },
+        {
+          "at": "2026-09-29T02:43:57.369Z",
+          "step": "交付资格",
+          "note": "提交端接单：前桅侧支索 → 挂起交付"
+        },
+        {
+          "at": "2026-09-29T02:44:14.385Z",
+          "step": "交付资格",
+          "note": "规格变更致结论失效：前桅侧支索 → 挂起交付"
+        },
+        {
+          "at": "2026-09-29T02:44:14.416Z",
+          "step": "交付资格",
+          "note": "规格变更致结论失效：前桅侧支索 → 挂起交付"
+        }
+      ],
+      "deliveryEligible": false
+    }
+  ],
+  "acceptances": [
+    {
+      "id": "EJ-1790649837369",
+      "modelKey": "MR-001",
+      "modelCode": "MR-001",
+      "position": "前桅侧支索",
+      "cableDiameter": 0.9,
+      "terminationType": "铝套压制",
+      "ferruleBatch": "PT-C",
+      "crimper": "吴敏",
+      "die": "",
+      "status": "待拉脱",
+      "conclusion": null,
+      "reworkCount": 0,
+      "createdAt": "2026-09-29T02:43:57.369Z",
+      "history": [
+        {
+          "at": "2026-09-29T02:43:57.369Z",
+          "kind": "提交",
+          "note": "新钢丝索端接验收单"
+        }
+      ]
+    },
+    {
+      "id": "EJ-1790649804760",
+      "modelKey": "MR-001",
+      "modelCode": "MR-001",
+      "position": "后桅升帆索",
+      "cableDiameter": 0.6,
+      "terminationType": "铝套压制",
+      "ferruleBatch": "PT-A",
+      "crimper": "吴敏",
+      "die": "M3",
+      "status": "合格",
+      "conclusion": {
+        "at": "2026-09-29T02:43:57.328Z",
+        "kind": "拉脱",
+        "displacement": 0.8,
+        "slip": 0.2,
+        "reviewer": "郑复查",
+        "pass": true
+      },
+      "reworkCount": 0,
+      "createdAt": "2026-09-29T02:43:24.760Z",
+      "history": [
+        {
+          "at": "2026-09-29T02:43:24.760Z",
+          "kind": "提交",
+          "note": "新钢丝索端接验收单"
+        },
+        {
+          "at": "2026-09-29T02:43:57.328Z",
+          "kind": "拉脱",
+          "displacement": 0.8,
+          "slip": 0.2,
+          "reviewer": "郑复查",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "EJ-1790649804726",
+      "modelKey": "MR-001",
+      "modelCode": "MR-001",
+      "position": "前桅侧支索",
+      "cableDiameter": 1,
+      "terminationType": "铜套压制",
+      "ferruleBatch": "PT-D",
+      "crimper": "赵压",
+      "die": "M3",
+      "status": "待拉脱",
+      "conclusion": null,
+      "reworkCount": 2,
+      "createdAt": "2026-09-29T02:43:24.724Z",
+      "history": [
+        {
+          "at": "2026-09-29T02:43:24.724Z",
+          "kind": "提交",
+          "note": "新钢丝索端接验收单"
+        },
+        {
+          "at": "2026-09-29T02:43:40.885Z",
+          "kind": "拉脱",
+          "displacement": 1.1,
+          "slip": 0.1,
+          "reviewer": "郑复查",
+          "pass": false
+        },
+        {
+          "at": "2026-09-29T02:43:40.907Z",
+          "kind": "拉脱",
+          "displacement": 1,
+          "slip": 0.31,
+          "reviewer": "郑复查",
+          "pass": false
+        },
+        {
+          "at": "2026-09-29T02:43:40.928Z",
+          "kind": "拉脱",
+          "displacement": 1,
+          "slip": 0.3,
+          "reviewer": "郑复查",
+          "pass": true
+        },
+        {
+          "at": "2026-09-29T02:44:14.385Z",
+          "kind": "结论失效",
+          "changed": [
+            "cableDiameter"
+          ],
+          "labels": [
+            "索径"
+          ],
+          "before": {
+            "at": "2026-09-29T02:43:40.928Z",
+            "kind": "拉脱",
+            "displacement": 1,
+            "slip": 0.3,
+            "reviewer": "郑复查",
+            "pass": true
+          }
+        },
+        {
+          "at": "2026-09-29T02:44:14.385Z",
+          "kind": "改规格",
+          "labels": [
+            "cableDiameter"
+          ]
+        },
+        {
+          "at": "2026-09-29T02:44:14.416Z",
+          "kind": "改规格",
+          "labels": [
+            "terminationType",
+            "ferruleBatch"
+          ]
         }
       ]
     }
