@@ -3,6 +3,16 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { terminationPage } from "./termination-page.js";
+import {
+  RuleError,
+  blockersFor,
+  listOrders,
+  recordPullTest,
+  recordRework,
+  submitOrder,
+  updateOrder,
+} from "./termination-ledger.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const dbPath = join(__dirname, "data", "model-rigging-calibration.json");
@@ -74,6 +84,10 @@ function summarize(item) {
   const logCount = (item.logs || []).length + (item.tasks || []).reduce((n, t) => n + (t.logs || []).length, 0);
   return { ...item, logCount };
 }
+async function summarizeWithTerminations(item) {
+  const blockers = await blockersFor(item);
+  return { ...summarize(item), terminationBlockers: blockers.length };
+}
 function page() {
   return `<!doctype html>
 <html lang="zh-CN">
@@ -98,7 +112,7 @@ function page() {
   </style>
 </head>
 <body>
-  <header><div><h1>古船模型帆索校准</h1><div class="meta">模型、帆索任务和校准记录串联</div></div><button id="reload">刷新</button></header>
+  <header><div><h1>古船模型帆索校准</h1><div class="meta">模型、帆索任务和校准记录串联</div></div><div><a href="/terminations" style="margin-right:14px">钢丝索端接验收 →</a><button id="reload">刷新</button></div></header>
   <main>
     <section>
       <form id="createForm"><h2>新增模型</h2><div id="fields"></div><label>初始状态</label><select name="status">${stages.map(s => '<option>'+s+'</option>').join('')}</select><button>保存模型</button></form>
@@ -138,14 +152,22 @@ function page() {
       const q = document.querySelector('#search').value.trim();
       const visible = items.filter(item => (!status || item.status === status) && (!q || JSON.stringify(item).includes(q)));
       cards.innerHTML = visible.map(item => cardHtml(item)).join('');
-      document.querySelectorAll('[data-status]').forEach(sel => sel.onchange = async () => { await api('/api/items/'+sel.dataset.status, { method:'PATCH', body: JSON.stringify({ status: sel.value }) }); await load(); });
+      document.querySelectorAll('[data-status]').forEach(sel => sel.onchange = async () => {
+        try {
+          await api('/api/items/'+sel.dataset.status, { method:'PATCH', body: JSON.stringify({ status: sel.value }) });
+        } catch (err) {
+          alert(err.message === 'delivery_blocked' ? '存在未合格端接单，复测通过后才能交付' : err.message);
+        }
+        await load();
+      });
       document.querySelectorAll('[data-note]').forEach(btn => btn.onclick = async () => { const id = btn.dataset.note; const note = prompt('记录备注'); if (note) { await api('/api/items/'+id+'/logs', { method:'POST', body: JSON.stringify({ step:'备注', note }) }); await load(); } });
     }
     function cardHtml(item) {
       const main = fields.slice(0,4).map(([key,label]) => '<div><b>'+label+'</b> '+(item[key] ?? '')+'</div>').join('');
       const tasks = (item.tasks || []).map(t => '<div class="meta">任务 '+t.position+' · '+t.status+' · '+t.tension+'</div>').join('');
+      const term = '<div class="'+(item.terminationBlockers ? 'warn' : 'meta')+'">端接未结束单：'+(item.terminationBlockers || 0)+(item.terminationBlockers ? '（交付被拦截）' : '，具备交付资格')+' · <a href="/terminations">前往验收</a></div>';
       const logs = (item.logs || []).slice(-4).map(l => '<div>'+l.step+'：'+l.note+'</div>').join('');
-      return '<article class="card"><h3>'+(item.code || item.id)+'</h3><span class="pill">'+item.status+'</span>'+main+tasks+'<label>状态</label><select data-status="'+(item.id || item.code)+'">'+stages.map(s => '<option '+(s===item.status?'selected':'')+'>'+s+'</option>').join('')+'</select><button class="secondary" data-note="'+(item.id || item.code)+'">追加备注</button><div class="logs meta">'+(logs || '暂无记录')+'</div></article>';
+      return '<article class="card"><h3>'+(item.code || item.id)+'</h3><span class="pill">'+item.status+'</span>'+main+tasks+term+'<label>状态</label><select data-status="'+(item.id || item.code)+'">'+stages.map(s => '<option '+(s===item.status?'selected':'')+'>'+s+'</option>').join('')+'</select><button class="secondary" data-note="'+(item.id || item.code)+'">追加备注</button><div class="logs meta">'+(logs || '暂无记录')+'</div></article>';
     }
     async function load() { items = await api('/api/items'); render(); }
     createForm.onsubmit = async event => { event.preventDefault(); await api('/api/items', { method:'POST', body: JSON.stringify(Object.fromEntries(new FormData(createForm).entries())) }); createForm.reset(); await load(); };
@@ -162,7 +184,10 @@ const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, `http://${req.headers.host}`);
     const db = await loadDb();
     if (req.method === "GET" && url.pathname === "/") return html(res, page());
-    if (req.method === "GET" && url.pathname === "/api/items") return send(res, 200, db.items.map(summarize));
+    if (req.method === "GET" && url.pathname === "/terminations") return html(res, terminationPage());
+    if (req.method === "GET" && url.pathname === "/api/items") {
+      return send(res, 200, await Promise.all(db.items.map(summarizeWithTerminations)));
+    }
     if (req.method === "POST" && url.pathname === "/api/items") {
       const input = await body(req);
       const item = { id: newId(), ...input, logs: [{ at: new Date().toISOString(), step: "建档", note: "创建模型" }] };
@@ -175,7 +200,15 @@ const server = http.createServer(async (req, res) => {
     if (patch && req.method === "PATCH") {
       const item = db.items.find(x => x.id === patch[1] || x.code === patch[1]);
       if (!item) return send(res, 404, { error: "item_not_found" });
-      Object.assign(item, await body(req));
+      const input = await body(req);
+      // 交付资格：存在未合格端接单（待拉脱/待返工）时不能置为已交付，复测通过才恢复
+      if (input.status === "已交付") {
+        const blockers = await blockersFor(item);
+        if (blockers.length) {
+          return send(res, 409, { error: "delivery_blocked", blockers: blockers.map(o => ({ id: o.id, position: o.position, status: o.status })) });
+        }
+      }
+      Object.assign(item, input);
       item.logs ||= [];
       item.logs.push({ at: new Date().toISOString(), step: "状态", note: "更新为" + item.status });
       await saveDb(db);
@@ -205,8 +238,32 @@ const server = http.createServer(async (req, res) => {
       return send(res, 201, item);
     }
     if (req.method === "GET" && url.pathname === "/api/stats") return send(res, 200, computeStats(db.items));
+
+    // ---- 钢丝索端接验收（规则/台账/页面入口见三个独立文件）----
+    if (req.method === "GET" && url.pathname === "/api/terminations") {
+      return send(res, 200, await listOrders(url.searchParams.get("model") || undefined));
+    }
+    if (req.method === "POST" && url.pathname === "/api/terminations") {
+      const input = await body(req);
+      const model = db.items.find(x => x.code === input.modelCode || x.id === input.modelCode);
+      const order = await submitOrder(model, input);
+      return send(res, 201, order);
+    }
+    const termPatch = url.pathname.match(/^\/api\/terminations\/([^/]+)$/);
+    if (termPatch && req.method === "PATCH") {
+      return send(res, 200, await updateOrder(termPatch[1], await body(req)));
+    }
+    const termPull = url.pathname.match(/^\/api\/terminations\/([^/]+)\/pull-tests$/);
+    if (termPull && req.method === "POST") {
+      return send(res, 201, await recordPullTest(termPull[1], await body(req)));
+    }
+    const termRework = url.pathname.match(/^\/api\/terminations\/([^/]+)\/reworks$/);
+    if (termRework && req.method === "POST") {
+      return send(res, 201, await recordRework(termRework[1], await body(req)));
+    }
     send(res, 404, { error: "not_found" });
   } catch (error) {
+    if (error instanceof RuleError) return send(res, error.status, { error: error.code, detail: error.detail });
     send(res, 500, { error: error.message });
   }
 });
